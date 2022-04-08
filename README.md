@@ -81,7 +81,7 @@ Dans ce cas, utiliser un port différent ou actualiser l'environnement bash (ouv
 
 ## USI-lite
 
-Une version allégée est disponible dans la branche USI-lite.
+Une version allégée est disponible dans [la branche USI-lite](https://github.com/Robin-mlh/USI/tree/USI-lite).
 
 Le but étant de réduire au maximum son poids, les échanges ne sont ***pas sécurisés*** et des fonctionnalités sont omises.
 
@@ -144,4 +144,4 @@ Je ne suis pas certifié et je ne peux rien garantir.
 ***Toute remarque constructive est la bienvenue***, n'hésitez pas à contribuer sur GitHub ou à me contacter par mail !  
 Mail: `dev_contactmail@protonmail.com`
 
-Merci à [@LDelaforet](https://github.com/LDelaforet) pour l'idée originale.****
+Merci à [@LDelaforet](https://github.com/LDelaforet) pour l'idée originale.
