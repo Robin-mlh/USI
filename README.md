@@ -7,7 +7,7 @@
 
 ## Sommaire
 
-- [Fonctionnalités et Objectif](#fonctionnalités-et-objectif)
+- [Fonctionnalités et Objectifs](#fonctionnalités-et-objectifs)
 - [__Installation__](#installation)
 - [__Utilisation__](#utilisation)
 - [USI-lite](#usi-lite)
@@ -15,7 +15,7 @@
 - [Avertissement et Contribution](#avertissement-et-contribution)
 
 
-## Fonctionnalités et Objectif
+## Fonctionnalités et Objectifs
 
 - __Echange de messages entre deux utilisateurs ou plus.__
 - __Envoi de fichiers__ (non chiffrés).
@@ -24,11 +24,10 @@
 - Affichage d'une empreinte de vérification pour vérifier l'identité des utilisateurs.
 - __Notifications de bureau__ sur Windows et Linux (désactivable).
 - Système de __citations__ ('>>citation>>message')
-- Mode développeur pour afficher plus de détails de fonctionnement.
+- Mode développeur pour afficher plus de détails sur le fonctionnement.
 
 L'objectif de USI est de permettre des communications sécurisées dans un environnement minimal.
-Le programme doit être simple d'utilisation et léger. Il n'a pas vocation à remplacer Signal,
-il a pour but d'être utilisé dans un environnement réduit aux besoins de sécurité importants.
+Le programme doit être simple d'utilisation et léger. Comme son nom l'indique (**U**se **S**ignal **I**nstead) il n'a pas vocation à remplacer Signal, il a pour but d'être utilisé dans un environnement réduit aux besoins de sécurité importants.
 Excepté pour les fichiers, les communications sont chiffrées (confidentialité, authenticité, intégrité).
 Aucune donnée n'est sauvegardée après la fermeture du programme.
 
@@ -122,7 +121,7 @@ ou que la clé de session ne vient pas du client. L'authenticité du serveur est
 (associée à la clé publique précédemment transmise au client qui l'a vérifiée) peut déchiffrer la clé de session chiffrée par le client.
 
 Le client et le serveur possèdent la clé secrète de session.
-Les deux parties sont sûr, si les procédures ont bien été respectées par les êtres humains,
+Les deux parties sont sûres, si les procédures ont bien été respectées par les êtres humains,
 qu'ils communiquent à un tiers authentifié.
 
 __Avantages:__
