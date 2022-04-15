@@ -320,10 +320,14 @@ if arguments.serveur:  # Serveur.
             break
         cle_privee = RSA.generate(CLE_RSA)  # Génération de la clé privée RSA.
         cle_publique = cle_privee.public_key()  # Obtention de la clé publique avec la clé privée.
-        connexion.sendall(b64encode(cle_publique.export_key("DER")))  # Envoi de la clé publique au client.
-        recu = connexion.recv(LEN_BUFFER_TCP)
-        cle_publique_client = RSA.import_key(b64decode(recu[:392]))  # Clé publique du client.
-        cle_session = PKCS1_OAEP.new(cle_privee).decrypt(b64decode(recu[736:]))  # Clé de session.
+        try:
+            connexion.sendall(b64encode(cle_publique.export_key("DER")))  # Envoi de la clé publique au client.
+            recu = connexion.recv(LEN_BUFFER_TCP)
+            cle_publique_client = RSA.import_key(b64decode(recu[:392]))  # Clé publique du client.
+            cle_session = PKCS1_OAEP.new(cle_privee).decrypt(b64decode(recu[736:]))  # Clé de session.
+        except ValueError:  # Le client a annulé la connexion.
+            ferme_connexion(infos_connexion, connexion)
+            continue
         if arguments.dev:  # Mode développeur.
             afficher("[dev] Échange sécurisé de la clé de session en cours..."
                      f"\n[dev] Clé publique: {cle_publique.export_key('PEM')}"
@@ -382,7 +386,7 @@ else:  # Client.
     # Chiffrement de la clé de session avec la clé publique du serveur.
     chiffrement_RSA_serveur = PKCS1_OAEP.new(cle_publique_serveur)
     cle_session_chiffree = chiffrement_RSA_serveur.encrypt(cle_session)
-    # Envoi au client de la clé publique, la signature et la clé de session chiffrée. Reçu par le serveur ligne 324.
+    # Envoi au client de la clé publique, la signature et la clé de session chiffrée. Reçu par le serveur ligne 325.
     connexion.sendall(b64encode(cle_publique.export_key("DER")) +
                       b64encode(signature_cle_session) +
                       b64encode(cle_session_chiffree))
