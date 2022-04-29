@@ -10,12 +10,12 @@ import socket
 import binascii
 import json
 import argparse
-from base64 import b64decode, b64encode
-from urllib.error import URLError
-from urllib.request import urlopen
+import readline
+import base64
+from urllib import error, request
 
 import tqdm
-from plyer import notification
+import plyer
 from Cryptodome.Cipher import AES, PKCS1_OAEP
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import pss
@@ -78,9 +78,9 @@ def reception(connexion, infos_connexion, cle):
                 ferme_connexion(infos_connexion, connexion)
                 break
             # Déchiffrement du message.
-            donnees = [b64decode(message_recu_brut[:20]),
-                       b64decode(message_recu_brut[20:44]),
-                       b64decode(message_recu_brut[44:])]
+            donnees = [base64.b64decode(message_recu_brut[:20]),
+                       base64.b64decode(message_recu_brut[20:44]),
+                       base64.b64decode(message_recu_brut[44:])]
             objet_dechiffrement = AES.new(cle, AES.MODE_OCB, nonce=donnees[0])
             message_recu = objet_dechiffrement.decrypt_and_verify(donnees[2], donnees[1]).decode()
             if message_recu == "!client-fermeture" and arguments.serveur:  # Un client signal sa déconnexion.
@@ -143,7 +143,7 @@ def thread_envoi():
         elif msg_a_envoyer == "!cls":  # Nettoyage de l'écran.
             liste_ecran = []
             if arguments.serveur:
-                afficher(f"Adresse ip locale: {ip_locale}  Adresse ip publique: {ip_publique}  Port écouté: "
+                afficher(f"Adresse ip locale: {ip_locale}  {ip_publique}  Port écouté: "
                          f"{arguments.port}\n", notification=False)
             else:
                 afficher(f"Connexion sécurisée établie avec le serveur {hote}:{arguments.port}\n"
@@ -187,9 +187,9 @@ def envoi_message(message, co_reception=None, co_unique=None,
             # Chiffrement du message
             objet_chiffrement = AES.new(cle, AES.MODE_OCB)
             texte_chiffre, tag = objet_chiffrement.encrypt_and_digest(message.encode())
-            message_chiffre = (f"{b64encode(objet_chiffrement.nonce).decode()}"
-                               f"{b64encode(tag).decode()}"
-                               f"{b64encode(texte_chiffre).decode()}")
+            message_chiffre = (f"{base64.b64encode(objet_chiffrement.nonce).decode()}"
+                               f"{base64.b64encode(tag).decode()}"
+                               f"{base64.b64encode(texte_chiffre).decode()}")
             co.sendall(message_chiffre.encode())  # Envoi du message chiffré.
             if arguments.dev:  # Mode développeur.
                 afficher(f"[dev] {message} ({message_chiffre}) >> {co.getsockname()}", notification=False)
@@ -272,9 +272,9 @@ def envoi_notification(contenu):
     if not arguments.notifications:
         try:
             if arguments.serveur:
-                notification.notify("USI serveur", contenu)
+                plyer.notification.notify("USI serveur", contenu)
             else:
-                notification.notify("USI client", contenu)
+                plyer.notification.notify("USI client", contenu)
         except Exception:
             # Impossible d'envoyer une notification.
             pass
@@ -289,8 +289,8 @@ if arguments.serveur:  # Serveur.
     except OSError:
         raise SystemExit("Erreur: ce port est déjà utilisé.")
     try:  # Obtention de l'ip publique.
-        ip_publique = json.loads(urlopen("http://httpbin.org/ip").read())["origin"]
-    except URLError:  # Adresse ip publique non disponible, vérifier la connexion.
+        ip_publique = f"Adresse ip publique: {json.loads(request.urlopen('http://httpbin.org/ip').read())['origin']}"
+    except error.URLError:  # Adresse ip publique non disponible, vérifier la connexion.
         ip_publique = ""
     try:  # Obtention de l'ip locale.
         sock_ip_locale = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -299,7 +299,7 @@ if arguments.serveur:  # Serveur.
     except Exception:
         ip_locale = "127.0.0.1"
     sock_ip_locale.close()
-    afficher(f"Adresse ip locale: {ip_locale}  Adresse ip publique: {ip_publique}  Port écouté: {arguments.port}\n",
+    afficher(f"Adresse ip locale: {ip_locale}  {ip_publique}  Port écouté: {arguments.port}\n",
              notification=False)
     sock.listen()
     sock.settimeout(0.5)
@@ -321,10 +321,10 @@ if arguments.serveur:  # Serveur.
         cle_privee = RSA.generate(CLE_RSA)  # Génération de la clé privée RSA.
         cle_publique = cle_privee.public_key()  # Obtention de la clé publique avec la clé privée.
         try:
-            connexion.sendall(b64encode(cle_publique.export_key("DER")))  # Envoi de la clé publique au client.
+            connexion.sendall(base64.b64encode(cle_publique.export_key("DER")))  # Envoi de la clé publique au client.
             recu = connexion.recv(LEN_BUFFER_TCP)
-            cle_publique_client = RSA.import_key(b64decode(recu[:392]))  # Clé publique du client.
-            cle_session = PKCS1_OAEP.new(cle_privee).decrypt(b64decode(recu[736:]))  # Clé de session.
+            cle_publique_client = RSA.import_key(base64.b64decode(recu[:392]))  # Clé publique du client.
+            cle_session = PKCS1_OAEP.new(cle_privee).decrypt(base64.b64decode(recu[736:]))  # Clé de session.
         except ValueError:  # Le client a annulé la connexion.
             ferme_connexion(infos_connexion, connexion)
             continue
@@ -334,7 +334,7 @@ if arguments.serveur:  # Serveur.
                      f"\n[dev] Clé publique du client: {cle_publique_client.export_key('PEM')}"
                      f"\n[dev] Empreinte SHA256 de la clé de session: {SHA256.new(cle_session).hexdigest()}")
         try:  # Vérification de la signature du client avec sa clé publique.
-            pss.new(cle_publique_client).verify(SHA256.new(cle_session), b64decode(recu[392:736]))
+            pss.new(cle_publique_client).verify(SHA256.new(cle_session), base64.b64decode(recu[392:736]))
         except (ValueError, TypeError):  # Echec de la vérification de l'authenticité de la signature.
             afficher("<Système> Échange de clé avorté: la signature de la clé de session n'est pas authentique.\n"
                      "L'identité du client est peut être usurpée.")
@@ -375,7 +375,7 @@ else:  # Client.
     cle_privee = RSA.generate(CLE_RSA)  # Génération de la clé RSA.
     cle_publique = cle_privee.public_key()  # Génération de la clé publique avec la clé privée.
     cle_session = Random.get_random_bytes(CLE_SESSION)  # Génération de la clé de session.
-    cle_publique_serveur = RSA.import_key(b64decode(connexion.recv(LEN_BUFFER_TCP)))  # Clé publique du serveur.
+    cle_publique_serveur = RSA.import_key(base64.b64decode(connexion.recv(LEN_BUFFER_TCP)))  # Clé publique du serveur.
     if arguments.dev:  # Mode développeur.
         afficher("Échange sécurisé de la clé de session..."
                  f"[dev] Clé publique: {cle_publique.export_key('PEM')}"
@@ -387,9 +387,9 @@ else:  # Client.
     chiffrement_RSA_serveur = PKCS1_OAEP.new(cle_publique_serveur)
     cle_session_chiffree = chiffrement_RSA_serveur.encrypt(cle_session)
     # Envoi au client de la clé publique, la signature et la clé de session chiffrée. Reçu par le serveur ligne 325.
-    connexion.sendall(b64encode(cle_publique.export_key("DER")) +
-                      b64encode(signature_cle_session) +
-                      b64encode(cle_session_chiffree))
+    connexion.sendall(base64.b64encode(cle_publique.export_key("DER")) +
+                      base64.b64encode(signature_cle_session) +
+                      base64.b64encode(cle_session_chiffree))
     empreinte_verif = SHA256.new(cle_publique.export_key("DER") + cle_publique_serveur.export_key("DER")).hexdigest()
     afficher(f"Connexion sécurisée établie avec le serveur {hote}:{arguments.port}\n"
              f"Empreinte de vérification: {empreinte_verif}\n", notification=False)
