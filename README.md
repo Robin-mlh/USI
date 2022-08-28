@@ -64,6 +64,10 @@ Pour se connecter sur la même machine (localhost), omettez l'argument -i.
 
 ![usage](images/usage.png)
 
+Si le client reste bloqué sur ```Connexion à example.com:12800...   ctrl+c pour annuler```,
+cela signifie que l'adresse du serveur est injoignable.
+Vérifiez alors que l'adresse hôte et le port utilisé sont accessibles depuis l'extérieur.
+
 Une erreur commune en lançant le serveur:
 
     Erreur: ce port est déjà utilisé.
