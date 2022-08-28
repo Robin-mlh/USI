@@ -45,13 +45,15 @@ def reception(connexion, infos_connexion):
                 ferme_connexion(infos_connexion, connexion)
             elif message_recu == "!serveur-fermeture" and not serveur:
                 ferme_connexion(infos_connexion, connexion)
-            elif "<système>" not in message_recu:
-                afficher(f"{infos_connexion[0]}>> {message_recu}")
-                if serveur:
-                    envoi_message(message_recu, co_reception=connexion,
-                                  afficher_message=False)
-            else:
+            elif "<système>" in message_recu:
                 afficher(message_recu)
+            elif message_recu.startswith("!:s"):
+                afficher(message_recu[3:])
+            else:
+                afficher(f"{infos_connexion[0]}>> {message_recu}")
+            if serveur and len(liste_connexions) > 1:
+                envoi_message(f"!:s{infos_connexion[0]}>> {message_recu}", co_reception=connexion,
+                              afficher_message=False)
         except (ConnectionResetError, ValueError, ConnectionAbortedError, OSError):
             ferme_connexion(infos_connexion, connexion)
             break
@@ -65,6 +67,8 @@ def thread_envoi():
           "\nEn attente de message entrant...")
     while not quitter:
         msg_a_envoyer = input().rstrip()
+        if msg_a_envoyer.startswith("!:s"):
+            msg_a_envoyer = msg_a_envoyer[3:]
         if msg_a_envoyer == "":
             afficher()
         elif msg_a_envoyer == "!cls":
@@ -138,18 +142,19 @@ if serveur:
         raise SystemExit(f"Le port {port} est déjà utilisé.")
     try:
         sock_ip_locale = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock_ip_locale.connect(('10.255.255.255', 1))
-        ip_locale = sock.getsockname()[0]
-    except Exception:
-        ip_locale = "127.0.0.1"
+        sock_ip_locale.connect(('1.1.1.1', 80))
+        ip_locale = sock_ip_locale.getsockname()[0]
+    except socket.error:
+        try:
+            ip_locale = socket.gethostbyname(socket.gethostname())
+        except socket.gaierror:
+            ip_locale = "127.0.0.1"
     sock_ip_locale.close()
-    afficher(f"En attente de client - Adresse ip locale: {ip_locale}"
-             f" - Port écouté: {port}\n")
+    afficher(f"En attente de client - Adresse ip locale: {ip_locale} - Port écouté: {port}\n")
     sock.listen()
     sock.settimeout(0.5)
     thread_envoi_lance = False
-    if not liste_connexions:
-        print("En attente de client...  ctrl+c pour quitter")
+    print("En attente de client...  ctrl+c pour quitter")
     while not quitter:
         while not quitter:
             try:
@@ -170,6 +175,7 @@ if serveur:
 else:
     infos_connexion = (hote, port)
     connexion = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(f"Connexion à {hote}:{port}...   ctrl+c pour annuler")
     afficher_en_attente = True
     while True:
         try:
@@ -177,13 +183,14 @@ else:
             break
         except (ConnectionRefusedError, TimeoutError) as e:
             if afficher_en_attente:
-                print(f"En attente du serveur ({hote}:{port})...   ctrl+c pour quitter")
+                afficher(f"En attente du serveur ({hote}:{port})...   ctrl+c pour quitter")
                 afficher_en_attente = False
             time.sleep(0.2)
         except (socket.gaierror, OSError):
             raise SystemExit(f"L'adresse {hote} est invalide.")
         except OverflowError:
             raise SystemExit(f"Le port {port} invalide.")
+    liste_ecran = []
     afficher(f"Connexion établie avec le serveur {hote}:{port}\n")
     liste_connexions.append(connexion)
     threading.Thread(target=reception, args=[connexion, (hote, port)]).start()
