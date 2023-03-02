@@ -1,3 +1,3 @@
-plyer~=2.0.0
-pycryptodomex~=3.15.0
-tqdm~=4.63.0
+plyer==2.1.0
+pycryptodomex==3.17
+tqdm==4.64.1
