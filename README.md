@@ -18,16 +18,18 @@
 ## Fonctionnalités et Objectifs
 
 - __Echange de messages entre deux utilisateurs ou plus.__
-- __Envoi de fichiers__ (non chiffrés).
-- __Chiffrement de bout en bout__ des messages avec `AES-128-OCB`.
-- __Echange de la clé de chiffrement automatique et sécurisé__ avec `RSA-2048`.
+- __Envoi de fichiers.__
+- __Chiffrement de bout en bout__ des messages et fichiers avec `AES-OCB`.
+- __Echange de la clé de chiffrement automatique et sécurisé__ avec `RSA-2048` et `RSASSA-PSS`.
+- Chargement d'une clé de chiffrement prédéfinie.
 - Affichage d'une empreinte de vérification pour vérifier l'identité des utilisateurs.
-- __Notifications des messages__ sur Windows et Linux (désactivable).
-- Mode développeur pour afficher plus de détails sur le fonctionnement.
+- __Notifications des messages__ sur Windows et Linux (option -n pour activer).
+- Mode développeur pour afficher plus de détails sur le fonctionnement (option --dev pour activer).
 
 L'objectif de USI est de permettre des communications sécurisées dans un environnement minimal.
-Comme son nom l'indique (**U**se **S**ignal **I**nstead) il n'a pas vocation à remplacer Signal, il a pour but d'être utilisé dans un environnement réduit aux besoins de sécurité importants.
-La confidentialité, l'authenticité et l'intégrité des données échangées est garantie (éxcepté pour les fichiers).
+Comme son nom l'indique (**U**se **S**ignal **I**nstead) il n'a pas vocation à remplacer Signal,
+il a pour but d'être utilisé dans un environnement réduit aux besoins de sécurité importants.
+La confidentialité, l'authenticité et l'intégrité des données échangées sont garanties.
 La seule information connue d'un utilisateur est son ip et aucune donnée n'est sauvegardée après la fermeture du programme.
 
 
@@ -39,7 +41,8 @@ Dans le même répertoire que USI, utiliser la commande suivante pour installer 
 
     py -m pip install -r requirements.txt
 
-Si vous rencontrez des problèmes lors de l'installation du module pycryptodome, référez-vous à [sa documentation](https://pycryptodome.readthedocs.io/en/latest/src/installation.html#): [ici](https://pycryptodome.readthedocs.io/en/latest/src/installation.html#windows-from-sources-python-3-5-and-newer) pour Windows et [ici](https://pycryptodome.readthedocs.io/en/latest/src/installation.html#compiling-in-linux-ubuntu) pour Linux.
+Si vous rencontrez des problèmes lors de l'installation du module pycryptodome,
+référez-vous à [sa documentation](https://pycryptodome.readthedocs.io/en/latest/src/installation.html#): [ici](https://pycryptodome.readthedocs.io/en/latest/src/installation.html#windows-from-sources-python-3-5-and-newer) pour Windows et [ici](https://pycryptodome.readthedocs.io/en/latest/src/installation.html#compiling-in-linux-ubuntu) pour Linux.
 
 
 ## Utilisation
@@ -48,19 +51,19 @@ __Pour lancer USI :__
 
 Dans un terminal :
 
-    python3 ./usi.py
+    python3 usi.py
 
 __Pour utiliser USI :__
 
 L'un des utilisateurs devra lancer USI en mode serveur pour attendre les clients.
-Pour recevoir des connexions hors du réseau local, penser à ouvrir le port utilisé (12800 par défaut) sur le routeur.
+Pour recevoir des connexions hors du réseau local, penser à ouvrir le port utilisé (`port 12800 par défaut`) sur le routeur.
 
     usi.py -s
 
 Les autres devront alors utiliser le mode client en précisant l'hôte (ip) du serveur.
-Pour se connecter sur la même machine (localhost), omettez l'argument -i.
+Pour se connecter sur la même machine (localhost), nul besoin de spécifier l'hôte.
 
-    usi.py -c -i HOTE
+    usi.py -c [HOTE[:PORT]]
 
 ![usage](images/usage.png)
 
@@ -74,23 +77,30 @@ Une erreur commune en lançant le serveur:
 
 Dans ce cas, utiliser un port différent ou actualiser l'environnement bash (ouvrir une nouvelle fenêtre ou `source /etc/profile`).
 
+À noter que les fichiers volumineux (+1 go) peuvent causer des crashs et leur réception peut s'avérer difficile.
 
 ## Détails et Fonctionnement
 
 *Se référer à la bibliothèque pycryptodome pour les détails cryptographiques.*
 
 Les connexions se font via n'importe quel réseau IPv4 local ou public.
-Une fois démarré, le serveur attend et accepte les clients en boucle, sans limite.  
-A chaque connexion avec le serveur, le client génère la clé de session de `128 bits`
-et la lui envoi automatiquement de manière sécurisée (voir 'Echange de la clé de session' ci-dessous). Ainsi, les communications sont chiffrées de bout en bout
-avec `AES-128-OCB` en utilisant une clé de session différente pour chaque client.
+Une fois démarré, le serveur attend et accepte les clients en boucle, sans limite.
 
-Les messages envoyés par le serveur sont chiffrés et envoyés à chaque client.
-Les messages envoyés par un client sont reçus par le serveur, puis ce dernier les chiffre et les envois aux autres clients.
-Il ce passe exactement la même chose pour les fichiers à l'exception qu'ils ne sont pas chiffrés.
+Si une clé de chiffrement prédéfinie par l'utilisateur est spécifiée avec l'option --cle CLE,
+elle est utilisée comme clé de session et les autres utilisateurs doivent charger la même clé.
+La clé doit être encodée en base64 ou hexadécimal et peut-être d'une longueur de `128, 192 ou 256 bits`.
+Ainsi, les communications sont chiffrées de bout en bout avec `AES-X-OCB` en utilisant la même clé de session pour chaque client.
+
+Sinon, chaque client génère automatiquement une clé de `128 bits` et l'envoie au serveur de manière sécurisée (voir 'Echange de la clé de session' ci-dessous).
+Ainsi, les communications sont chiffrées de bout en bout avec `AES-128-OCB` en utilisant une clé de session différente pour chaque client.
+
+Les messages et fichiers envoyés par le serveur sont chiffrés et envoyés à chaque client.
+Les messages et fichiers envoyés par un client sont reçus par le serveur, puis ce dernier les chiffre et les envois aux autres clients.
 
 
-#### Echange de la clé de session:
+#### Echange de la clé de session automatique:
+
+*Cette partie n'est pas exécutée lorsque la clé de session est spécifiée par l'utilisateur.*
 
 Le client et le serveur génèrent une paire de clé `RSA-2048` chacun.
 Le client génère la clé de session de `128 bits` de manière cryptographiquement aléatoire.
